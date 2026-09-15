@@ -6,7 +6,7 @@ import psycopg
 
 from app.db.database import get_db
 from app.schemas.users import UserCreate, UserLogin, UserResponse, Token
-from app.schemas.expenses import ExpenseCreate, ExpenseResponse
+from app.schemas.expenses import ExpenseCreate, ExpenseResponse, ExpenseUpdate
 from app.security import (hash_password, verify_password, create_access_token)
 from app.dependencies import get_current_user
 
@@ -138,6 +138,7 @@ def create_expense(
     }
 
 
+# Get all expenses for the current user
 @app.get("/expenses", response_model=list[ExpenseResponse])
 def get_expenses(
     user=Depends(get_current_user),
@@ -172,6 +173,7 @@ def get_expenses(
     ]
 
 
+# Get a specific expense by ID for the current user
 @app.get("/expenses/{expense_id}", response_model=ExpenseResponse)
 def get_expense(
     expense_id: str,
@@ -207,6 +209,75 @@ def get_expense(
         "date": expense[4],
         "created_at": expense[5],
         "category_id": str(expense[6]),
+    }
+
+
+# Update a specific expense by ID for the current user
+@app.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
+def update_expense(
+    expense_id: str,
+    expense: ExpenseUpdate,
+    user=Depends(get_current_user),
+    connection: Connection = Depends(get_db),
+):
+    user_id = user[0]
+
+    updates = expense.model_dump(exclude_unset=True)
+
+    if not updates:
+        raise HTTPException(
+            status_code=400,
+            detail="No fields provided for update",
+        )
+
+    set_clauses = []
+    values = []
+
+    for field, value in updates.items():
+        set_clauses.append(f"{field} = %s")
+        values.append(value)
+
+    values.extend([expense_id, user_id])
+
+    query = f"""
+        UPDATE expenses
+        SET {", ".join(set_clauses)}
+        WHERE id = %s
+        AND user_id = %s
+        RETURNING id, name, description, amount, date, created_at, category_id;
+    """
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query, values)
+            updated_expense = cursor.fetchone()
+
+        if not updated_expense:
+            connection.rollback()
+
+            raise HTTPException(
+                status_code=404,
+                detail="Expense not found",
+            )
+
+        connection.commit()
+
+    except psycopg.errors.ForeignKeyViolation:
+        connection.rollback()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Category does not exist",
+        )
+
+    return {
+        "id": str(updated_expense[0]),
+        "name": updated_expense[1],
+        "description": updated_expense[2],
+        "amount": updated_expense[3],
+        "date": updated_expense[4],
+        "created_at": updated_expense[5],
+        "category_id": str(updated_expense[6]),
     }
 
 
