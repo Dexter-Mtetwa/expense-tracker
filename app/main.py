@@ -79,6 +79,8 @@ def login(user: UserLogin, connection: Connection = Depends(get_db)):
     }
 
 
+
+
 # ---expense oriented endpoints---
 @app.post("/expenses", response_model=ExpenseResponse, status_code=201)
 def create_expense(
@@ -168,6 +170,44 @@ def get_expenses(
         }
         for expense in expenses
     ]
+
+
+@app.get("/expenses/{expense_id}", response_model=ExpenseResponse)
+def get_expense(
+    expense_id: str,
+    user=Depends(get_current_user),
+    connection: Connection = Depends(get_db),
+):
+    user_id = user[0]
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, name, description, amount, date, created_at, category_id
+            FROM expenses
+            WHERE id = %s
+            AND user_id = %s;
+            """,
+            (expense_id, user_id),
+        )
+
+        expense = cursor.fetchone()
+
+    if not expense:
+        raise HTTPException(
+            status_code=404,
+            detail="Expense not found",
+        )
+
+    return {
+        "id": str(expense[0]),
+        "name": expense[1],
+        "description": expense[2],
+        "amount": expense[3],
+        "date": expense[4],
+        "created_at": expense[5],
+        "category_id": str(expense[6]),
+    }
 
 
 @app.get('/db-test')
