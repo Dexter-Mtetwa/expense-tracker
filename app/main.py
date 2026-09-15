@@ -66,7 +66,7 @@ def login(user: UserLogin, connection: Connection = Depends(get_db)):
         existing_user = cursor.fetchone()
 
     if not existing_user or not verify_password(user.password, existing_user[2]):
-        raise HTTPException(status_code=401, detail="wakapusa")
+        raise HTTPException(status_code=401, detail="Email or password is incorrect")
 
     access_token = create_access_token(
         data={'sub': str(existing_user[0])},
@@ -88,33 +88,42 @@ def create_expense(
 ):
     user_id = user[0]
 
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO expenses (
-                name,
-                description,
-                amount,
-                date,
-                user_id,
-                category_id
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO expenses (
+                    name,
+                    description,
+                    amount,
+                    date,
+                    user_id,
+                    category_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id, name, description, amount, date, created_at, category_id;
+                """,
+                (
+                    expense.name,
+                    expense.description,
+                    expense.amount,
+                    expense.date,
+                    user_id,
+                    expense.category_id,
+                ),
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id, name, description, amount, date, created_at, category_id;
-            """,
-            (
-                expense.name,
-                expense.description,
-                expense.amount,
-                expense.date,
-                user_id,
-                expense.category_id,
-            ),
+
+            created_expense = cursor.fetchone()
+
+        connection.commit()
+
+    except psycopg.errors.ForeignKeyViolation:
+        connection.rollback()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Category does not exist",
         )
-
-        created_expense = cursor.fetchone()
-
-    connection.commit()
 
     return {
         "id": str(created_expense[0]),
