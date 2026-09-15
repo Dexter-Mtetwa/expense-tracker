@@ -1,13 +1,13 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExpenseCreate(BaseModel):
     name: str
     description: str | None = None
-    amount: Decimal
+    amount: Decimal = Field(gt=0)
     date: date
     category_id: str
 
