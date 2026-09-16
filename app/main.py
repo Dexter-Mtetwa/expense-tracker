@@ -281,6 +281,44 @@ def update_expense(
     }
 
 
+# Delete a specific expense by ID for the current user
+@app.delete("/expenses/{expense_id}", status_code=204)
+def delete_expense(
+    expense_id: str,
+    user=Depends(get_current_user),
+    connection: Connection = Depends(get_db),
+):
+    user_id = user[0]
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM expenses
+                WHERE id = %s
+                AND user_id = %s
+                RETURNING id;
+                """,
+                (expense_id, user_id),
+            )
+
+            deleted_expense = cursor.fetchone()
+
+        if not deleted_expense:
+            connection.rollback()
+
+            raise HTTPException(
+                status_code=404,
+                detail="Expense not found",
+            )
+
+        connection.commit()
+
+    except psycopg.Error:
+        connection.rollback()
+        raise
+
+    
 @app.get('/db-test')
 def db_test(connection: Connection = Depends(get_db)):
     with connection.cursor() as cursor:
