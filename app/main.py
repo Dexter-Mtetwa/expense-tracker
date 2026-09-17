@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, APIRouter, Query
 from psycopg import Connection
 import psycopg
 
@@ -13,6 +13,7 @@ from app.dependencies import get_current_user
 
 
 app = FastAPI()
+api_router = APIRouter(prefix="/api/v1", tags=["API v1"])
 
 
 @app.get('/')
@@ -26,7 +27,7 @@ def health_check():
 
 
 # ---user oriented endpoints---
-@app.post('/users', response_model=UserResponse, status_code=201)
+@api_router.post('/users', response_model=UserResponse, status_code=201)
 def create_user(user: UserCreate, connection: Connection = Depends(get_db)):
     try:
         with connection.cursor() as cursor:
@@ -53,7 +54,7 @@ def create_user(user: UserCreate, connection: Connection = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Email already exists")
 
 
-@app.post('/login', response_model=Token)
+@api_router.post('/login', response_model=Token)
 def login(user: UserLogin, connection: Connection = Depends(get_db)):
     with connection.cursor() as cursor:
         cursor.execute(
@@ -83,7 +84,7 @@ def login(user: UserLogin, connection: Connection = Depends(get_db)):
 
 
 # ---expense oriented endpoints---
-@app.post("/expenses", response_model=ExpenseResponse, status_code=201)
+@api_router.post("/expenses", response_model=ExpenseResponse, status_code=201)
 def create_expense(
     expense: ExpenseCreate,
     user=Depends(get_current_user),
@@ -140,7 +141,7 @@ def create_expense(
 
 
 # Get all expenses for the current user
-@app.get("/expenses", response_model=list[ExpenseResponse])
+@api_router.get("/expenses", response_model=list[ExpenseResponse])
 def get_expenses(
     user=Depends(get_current_user),
     connection: Connection = Depends(get_db),
@@ -175,7 +176,7 @@ def get_expenses(
 
 
 # Get a specific expense by ID for the current user
-@app.get("/expenses/{expense_id}", response_model=ExpenseResponse)
+@api_router.get("/expenses/{expense_id}", response_model=ExpenseResponse)
 def get_expense(
     expense_id: str,
     user=Depends(get_current_user),
@@ -214,7 +215,7 @@ def get_expense(
 
 
 # Update a specific expense by ID for the current user
-@app.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
+@api_router.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
 def update_expense(
     expense_id: str,
     expense: ExpenseUpdate,
@@ -283,7 +284,7 @@ def update_expense(
 
 
 # Delete a specific expense by ID for the current user
-@app.delete("/expenses/{expense_id}", status_code=204)
+@api_router.delete("/expenses/{expense_id}", status_code=204)
 def delete_expense(
     expense_id: str,
     user=Depends(get_current_user),
@@ -322,7 +323,7 @@ def delete_expense(
 
 
 # ---category oriented endpoints---
-@app.post("/categories", response_model=CategoryResponse, status_code=201)
+@api_router.post("/categories", response_model=CategoryResponse, status_code=201)
 def create_category(
     category: CategoryCreate,
     user=Depends(get_current_user),
@@ -361,7 +362,7 @@ def create_category(
 
 
 # Get all categories
-@app.get("/categories", response_model=list[CategoryResponse])
+@api_router.get("/categories", response_model=list[CategoryResponse])
 def get_categories(
     user=Depends(get_current_user),
     connection: Connection = Depends(get_db),
@@ -388,7 +389,7 @@ def get_categories(
 
 
 # Get a specific category by ID
-@app.get("/categories/{category_id}", response_model=CategoryResponse)
+@api_router.get("/categories/{category_id}", response_model=CategoryResponse)
 def get_category(
     category_id: str,
     user=Depends(get_current_user),
@@ -420,7 +421,7 @@ def get_category(
 
 
 # Update a specific category by ID
-@app.patch("/categories/{category_id}", response_model=CategoryResponse)
+@api_router.patch("/categories/{category_id}", response_model=CategoryResponse)
 def update_category(
     category_id: str,
     category: CategoryUpdate,
@@ -503,7 +504,7 @@ def update_category(
 
 
 # Delete a specific category by ID
-@app.delete("/categories/{category_id}", status_code=204)
+@api_router.delete("/categories/{category_id}", status_code=204)
 def delete_category(
     category_id: str,
     user=Depends(get_current_user),
@@ -544,10 +545,13 @@ def delete_category(
         )
 
     
-@app.get('/db-test')
+@api_router.get('/db-test')
 def db_test(connection: Connection = Depends(get_db)):
     with connection.cursor() as cursor:
         cursor.execute('SELECT 1')
         result = cursor.fetchone()
 
     return {'db_test_result': result[0]}
+
+
+app.include_router(api_router)
