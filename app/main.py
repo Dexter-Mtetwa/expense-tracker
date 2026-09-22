@@ -143,6 +143,7 @@ def create_expense(
 # Get all expenses for the current user
 @api_router.get("/expenses", response_model=list[ExpenseResponse])
 def get_expenses(
+    category_id: str | None = None,
     user=Depends(get_current_user),
     connection: Connection = Depends(get_db),
 ):
@@ -154,9 +155,10 @@ def get_expenses(
             SELECT id, name, description, amount, date, created_at, category_id
             FROM expenses
             WHERE user_id = %s
+            AND (%s::uuid IS NULL OR category_id = %s::uuid)
             ORDER BY date DESC, created_at DESC;
             """,
-            (user_id,),
+            (user_id, category_id, category_id),
         )
 
         expenses = cursor.fetchall()
