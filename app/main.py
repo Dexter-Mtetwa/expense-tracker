@@ -177,6 +177,30 @@ def get_expenses(
     ]
 
 
+# Get the total amount spent for the current user, optionally filtered by category
+@api_router.get("/expenses/total")
+def get_total_spent(
+    category_id: str | None = None,
+    user=Depends(get_current_user),
+    connection: Connection = Depends(get_db),
+):
+    user_id = user[0]
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(amount), 0)
+            FROM expenses
+            WHERE user_id = %s
+            AND (%s::uuid IS NULL OR category_id = %s::uuid);
+            """,
+            (user_id, category_id, category_id),
+        )
+        total = cursor.fetchone()[0]
+
+    return {"total": total}
+
+
 # Get a specific expense by ID for the current user
 @api_router.get("/expenses/{expense_id}", response_model=ExpenseResponse)
 def get_expense(
