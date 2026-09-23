@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from psycopg import Connection
-import psycopg
 
 from app.schemas.expenses import ExpenseResponse
 from app.dependencies import get_current_user, get_db
