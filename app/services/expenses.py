@@ -160,22 +160,16 @@ def delete_expense(
     connection: Connection,
     user_id,
 ):
-    try:
-        deleted_expense = expense_repository.delete_expense(
-            connection=connection,
-            expense_id=expense_id,
-            user_id=user_id,
+    deleted_expense = expense_repository.delete_expense(
+        connection=connection,
+        expense_id=expense_id,
+        user_id=user_id,
+    )
+
+    if not deleted_expense:
+        raise HTTPException(
+            status_code=404,
+            detail="Expense not found",
         )
 
-        if not deleted_expense:
-            connection.rollback()
-            raise HTTPException(
-                status_code=404,
-                detail="Expense not found",
-            )
-
-        connection.commit()
-
-    except psycopg.Error:
-        connection.rollback()
-        raise
+    connection.commit()

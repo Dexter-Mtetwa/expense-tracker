@@ -1,10 +1,14 @@
+from uuid import UUID
+
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from uuid import UUID
-import jwt
+from psycopg import Connection
 
-from app.security import decode_access_token
 from app.db.database import get_db
+from app.repositories import users as user_repository
+from app.security import decode_access_token
+
 
 security = HTTPBearer()
 
@@ -49,18 +53,12 @@ def get_current_user_id(
 
 def get_current_user(
     user_id: UUID = Depends(get_current_user_id),
-    connection = Depends(get_db),
+    connection: Connection = Depends(get_db),
 ):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT id, email, role, created_at
-            FROM users
-            WHERE id = %s;
-            """,
-            (user_id,),
-        )
-        user = cursor.fetchone()
+    user = user_repository.get_user_by_id(
+        connection=connection,
+        user_id=user_id,
+    )
 
     if not user:
         raise HTTPException(
@@ -69,3 +67,18 @@ def get_current_user(
         )
 
     return user
+
+
+def require_role(required_role: str):
+    def role_dependency(
+        user=Depends(get_current_user),
+    ):
+        if user[2] != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+
+        return user
+
+    return role_dependency
