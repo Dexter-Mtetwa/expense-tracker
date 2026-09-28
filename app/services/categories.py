@@ -1,32 +1,25 @@
+import psycopg
 from fastapi import HTTPException
 from psycopg import Connection
-import psycopg
+
+from app.repositories import categories as category_repository
 
 
-# Create a category
 def create_category(
     category,
     connection: Connection,
     user_id,
 ):
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO categories (name, creator)
-                VALUES (%s, %s)
-                RETURNING id, name, created_at;
-                """,
-                (category.name, user_id),
-            )
-
-            created_category = cursor.fetchone()
-
+        # outsourced the service layer to the repository layer to keep the service layer clean and focused on business logic
+        created_category = category_repository.create_category(
+            connection=connection,
+            category=category,
+            user_id=user_id,
+        )
         connection.commit()
-
     except psycopg.errors.UniqueViolation:
         connection.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Category already exists",
@@ -39,20 +32,12 @@ def create_category(
     }
 
 
-# Get all categories
 def get_categories(
     connection: Connection,
 ):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT id, name, created_at
-            FROM categories
-            ORDER BY name;
-            """
-        )
-
-        categories = cursor.fetchall()
+    categories = category_repository.get_categories(
+        connection=connection,
+    )
 
     return [
         {
@@ -64,22 +49,14 @@ def get_categories(
     ]
 
 
-# Get a specific category by ID
 def get_category(
     category_id,
     connection: Connection,
 ):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT id, name, created_at
-            FROM categories
-            WHERE id = %s;
-            """,
-            (category_id,),
-        )
-
-        category = cursor.fetchone()
+    category = category_repository.get_category(
+        connection=connection,
+        category_id=category_id,
+    )
 
     if not category:
         raise HTTPException(
@@ -94,7 +71,6 @@ def get_category(
     }
 
 
-# Update a specific category by ID
 def update_category(
     category_id,
     category,
@@ -109,20 +85,11 @@ def update_category(
             detail="No fields provided for update",
         )
 
-    # Check if the category is in use before updating the name
     if "name" in updates:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT 1
-                FROM expenses
-                WHERE category_id = %s
-                LIMIT 1;
-                """,
-                (category_id,),
-            )
-
-            category_in_use = cursor.fetchone()
+        category_in_use = category_repository.is_category_in_use(
+            connection=connection,
+            category_id=category_id,
+        )
 
         if category_in_use:
             raise HTTPException(
@@ -131,27 +98,15 @@ def update_category(
             )
 
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE categories
-                SET name = %s
-                WHERE id = %s
-                AND creator = %s
-                RETURNING id, name, created_at;
-                """,
-                (
-                    updates["name"],
-                    category_id,
-                    user_id,
-                ),
-            )
-
-            updated_category = cursor.fetchone()
+        updated_category = category_repository.update_category(
+            connection=connection,
+            category_id=category_id,
+            name=updates["name"],
+            user_id=user_id,
+        )
 
         if not updated_category:
             connection.rollback()
-
             raise HTTPException(
                 status_code=404,
                 detail="Category not found",
@@ -161,7 +116,6 @@ def update_category(
 
     except psycopg.errors.UniqueViolation:
         connection.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Category already exists",
@@ -174,29 +128,20 @@ def update_category(
     }
 
 
-# Delete a specific category by ID
 def delete_category(
     category_id,
     user_id,
     connection: Connection,
 ):
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                DELETE FROM categories
-                WHERE id = %s
-                AND creator = %s
-                RETURNING id;
-                """,
-                (category_id, user_id),
-            )
-
-            deleted_category = cursor.fetchone()
+        deleted_category = category_repository.delete_category(
+            connection=connection,
+            category_id=category_id,
+            user_id=user_id,
+        )
 
         if not deleted_category:
             connection.rollback()
-
             raise HTTPException(
                 status_code=404,
                 detail="Category not found",
@@ -206,7 +151,6 @@ def delete_category(
 
     except psycopg.errors.ForeignKeyViolation:
         connection.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Category is in use",

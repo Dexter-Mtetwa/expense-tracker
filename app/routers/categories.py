@@ -25,6 +25,7 @@ def create_category_endpoint(
 ):
     user_id = user[0]
 
+    # outsourced the business logic to the service layer to keep the router clean and focused on routing
     return create_category_service(
         category=category,
         connection=connection,
