@@ -27,6 +27,7 @@ def get_expenses_endpoint(
 ):
     user_id = user[0]
 
+    # outsourced the business logic to the service layer to keep the router clean and focused on routing
     return get_expenses_service(
         connection=connection,
         user_id=user_id,
