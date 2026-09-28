@@ -6,7 +6,10 @@ class Settings(BaseSettings):
     test_database_url: str
     jwt_secret_key: str
 
-    model_config = SettingsConfigDict(env_file='.env')
+    model_config = SettingsConfigDict(
+        env_file='.env', 
+        env_file_encoding="utf-8",
+    )
 
 
 settings = Settings()
