@@ -20,6 +20,13 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class UserListResponse(BaseModel):
+    id: str
+    email: EmailStr
+    role: str
+    created_at: datetime
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
