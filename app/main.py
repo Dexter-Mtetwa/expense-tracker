@@ -10,6 +10,10 @@ from app.routers.categories import router as categories_router
 from app.routers.users import router as users_router
 from app.routers.auth import router as auth_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
+
 
 configure_logging()
 
@@ -33,11 +37,21 @@ async def lifespan(app: FastAPI):
         pool.close()
 
 
+# Create FastAPI application instance
 app = FastAPI(
     title="Expense Tracker API",
     lifespan=lifespan,
 )
 
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # API Router
