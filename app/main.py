@@ -1,6 +1,7 @@
-from fastapi import FastAPI,APIRouter
-from contextlib import asynccontextmanager
 import logging
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
 
 from app.logging_config import configure_logging
 from app.db.database import create_pool
@@ -52,6 +53,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Exception handler for unexpected exceptions
+@app.exception_handler(Exception)
+async def unexpected_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    logger.exception(
+        "Unhandled exception while processing %s %s",
+        request.method,
+        request.url.path,
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 # API Router
