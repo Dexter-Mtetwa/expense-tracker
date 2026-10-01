@@ -1,17 +1,26 @@
 from fastapi import FastAPI,APIRouter
 from contextlib import asynccontextmanager
+import logging
+
+from app.logging_config import configure_logging
+from app.db.database import create_pool
 
 from app.routers.expenses import router as expenses_router
 from app.routers.categories import router as categories_router
 from app.routers.users import router as users_router
 from app.routers.auth import router as auth_router
 
-from app.db.database import create_pool
 
+configure_logging()
+
+# Get the logger for this module
+logger = logging.getLogger(__name__)
 
 # Lifespan event to manage the database connection pool
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Starting application")
+
     pool = create_pool()
     pool.open(wait=True)
 
@@ -20,6 +29,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        logger.info("Shutting down application")
         pool.close()
 
 
