@@ -1,16 +1,20 @@
-import psycopg
+from fastapi import Request
+from psycopg_pool import ConnectionPool
 
 from app.config import settings
 
 
-def get_connection():
-    return psycopg.connect(settings.database_url)
+def create_pool() -> ConnectionPool:
+    return ConnectionPool(
+        conninfo=settings.database_url,
+        min_size=2,
+        max_size=10,
+        open=False,
+    )
 
 
-def get_db():
-    connection = get_connection()
+def get_db(request: Request):
+    pool: ConnectionPool = request.app.state.db_pool
 
-    try:
+    with pool.connection() as connection:
         yield connection
-    finally:
-        connection.close()
