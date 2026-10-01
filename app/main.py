@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, APIRouter, Request
+from fastapi import FastAPI, APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
@@ -86,9 +86,28 @@ def root():
     return {'message': 'Expense Tracker API'}
 
 
+# Health check endpoint to verify if the application is running
 @app.get('/health')
 def health_check():
     return {'status': 'ok'}
 
+
+# Readiness check endpoint to verify database connectivity
+@app.get('/ready')
+def readiness_check(request: Request):
+    try:
+        with request.app.state.db_pool.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+
+        return {'status': 'ready'}
+
+    except Exception:
+        logger.exception("Readiness check failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Service unavailable",
+        )
 
 app.include_router(api_router)
