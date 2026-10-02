@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    container_name: expense-tracker-api
+    env_file:
+      - .env.docker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
