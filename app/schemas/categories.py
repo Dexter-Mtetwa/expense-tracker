@@ -21,6 +21,7 @@ class CategoryCreate(BaseModel):
 class CategoryResponse(BaseModel):
     id: UUID
     name: str
+    creator: UUID
     created_at: datetime
 
 
