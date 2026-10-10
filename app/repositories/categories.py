@@ -19,7 +19,7 @@ def get_categories(connection: Connection):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, name, created_at
+            SELECT id, name, creator, created_at
             FROM categories
             ORDER BY name;
             """
