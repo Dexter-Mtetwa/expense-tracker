@@ -8,7 +8,7 @@ def create_category(connection: Connection, category, user_id):
             """
             INSERT INTO categories (name, creator)
             VALUES (%s, %s)
-            RETURNING id, name, created_at;
+            RETURNING id, name, creator, created_at;
             """,
             (category.name, user_id),
         )
@@ -31,7 +31,7 @@ def get_category(connection: Connection, category_id):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, name, created_at
+            SELECT id, name, creator, created_at
             FROM categories
             WHERE id = %s;
             """,
@@ -62,7 +62,7 @@ def update_category(connection: Connection, category_id, name, user_id):
             SET name = %s
             WHERE id = %s
             AND creator = %s
-            RETURNING id, name, created_at;
+            RETURNING id, name, creator, created_at;
             """,
             (name, category_id, user_id),
         )
