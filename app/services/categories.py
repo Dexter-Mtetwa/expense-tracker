@@ -43,7 +43,8 @@ def get_categories(
         {
             "id": str(category[0]),
             "name": category[1],
-            "created_at": category[2],
+            "creator": str(category[2]),
+            "created_at": category[3],
         }
         for category in categories
     ]
