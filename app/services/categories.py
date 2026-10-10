@@ -28,7 +28,8 @@ def create_category(
     return {
         "id": str(created_category[0]),
         "name": created_category[1],
-        "created_at": created_category[2],
+        "creator": str(created_category[2]),
+        "created_at": created_category[3],
     }
 
 
@@ -68,7 +69,8 @@ def get_category(
     return {
         "id": str(category[0]),
         "name": category[1],
-        "created_at": category[2],
+        "creator": str(category[2]),
+        "created_at": category[3],
     }
 
 
@@ -123,9 +125,10 @@ def update_category(
         )
 
     return {
-        "id": str(updated_category[0]),
-        "name": updated_category[1],
-        "created_at": updated_category[2],
+        "id": str(created_category[0]),
+        "name": created_category[1],
+        "creator": str(created_category[2]),
+        "created_at": created_category[3],
     }
 
 
